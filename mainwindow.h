@@ -20,6 +20,10 @@ private slots:
     void on_pushButton_ajouter_clicked();  // Ajout de la déclaration de la fonction ici
     void on_pushButton_supprimer_clicked();
     void on_pushButton_modifier_clicked();
+    void on_pushButton_trier_clicked();
+    void on_pushButton_rechercher_clicked();
+    void on_exporter_clicked();
+    void on_stat_clicked();
 
 private:
     Ui::MainWindow *ui;

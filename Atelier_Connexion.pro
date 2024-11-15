@@ -25,6 +25,10 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 CONFIG += c++11
 QT +=sql
+QT += core gui widgets printsupport
+QT += core gui
+QT += charts
+
 CONFIG += console
 SOURCES += \
     chambre.cpp \

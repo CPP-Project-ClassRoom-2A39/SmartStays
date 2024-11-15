@@ -32,6 +32,10 @@ public:
     QSqlQueryModel *afficher();
     bool supprimer(int);
     bool modifier(int,QString);
+    QSqlQueryModel *trier(QString);
+    QSqlQueryModel* rechercher(QString);
+    static void exportPDF(const std::vector<Chambre>& chambres);
+    void statistiques(const std::vector<Chambre>& chambres);
 
 };
 

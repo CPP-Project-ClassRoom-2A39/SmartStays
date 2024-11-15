@@ -3,14 +3,75 @@
 #include"chambre.h"
 #include <QDebug>
 #include <QMessageBox>
-
+#include <QIntValidator>
+#include <QLineEdit>
+#include <QCompleter>
+#include <QStringList>
+#include <QCompleter>
+#include <QStringList>
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
     ui->tableView->setModel(c.afficher());
+    //controle de saisie
+ui->prix->setValidator(new QIntValidator(0, 99999, this));
+ui->num->setValidator(new QIntValidator(0, 99999, this));
+ui->etage->setValidator(new QIntValidator(0, 99, this));
+ui->lineEdit_supprimer->setValidator(new QIntValidator(0, 99999, this));
+ui->lineEdit_8->setValidator(new QIntValidator(0, 99999, this));
 
+
+QStringList typeOptions = {"double", "simple", "suite"};
+QStringList etatOptions = {"libre", "occupée"};
+
+// CONTROLE SAISIE TYPE
+QCompleter *typeCompleter = new QCompleter(typeOptions, this);
+typeCompleter->setCaseSensitivity(Qt::CaseInsensitive);
+
+ui->type->setCompleter(typeCompleter);
+ui->lineEdit_chercher->setCompleter(typeCompleter);
+
+connect(ui->type, &QLineEdit::editingFinished, [=]() {
+    if (!typeOptions.contains(ui->type->text(), Qt::CaseInsensitive)) {
+        ui->type->clear();
+        QMessageBox::warning(this, "Entrée invalide", "Veuillez entrer 'double', 'simple' ou 'suite'.");
+    }
+});
+
+connect(ui->lineEdit_chercher, &QLineEdit::editingFinished, [=]() {
+    if (!typeOptions.contains(ui->lineEdit_chercher->text(), Qt::CaseInsensitive)) {
+        ui->lineEdit_chercher->clear();
+        QMessageBox::warning(this, "Entrée invalide", "Veuillez entrer 'double', 'simple' ou 'suite'.");
+    }
+});
+
+// Controle saisie etat
+QCompleter *etatCompleter = new QCompleter(etatOptions, this);
+etatCompleter->setCaseSensitivity(Qt::CaseInsensitive);
+
+ui->etat->setCompleter(etatCompleter);
+ui->lineEdit_7->setCompleter(etatCompleter);
+
+// Vérification de la saisie pour 'etat'
+connect(ui->etat, &QLineEdit::editingFinished, [=]() {
+    if (!etatOptions.contains(ui->etat->text(), Qt::CaseInsensitive)) {
+        ui->etat->clear();
+        QMessageBox::warning(this, "Entrée invalide", "Veuillez entrer 'libre' ou 'occupée'.");
+    }
+});
+
+// Vérification de la saisie pour 'lineEdit_7'
+connect(ui->lineEdit_7, &QLineEdit::editingFinished, [=]() {
+    if (!etatOptions.contains(ui->lineEdit_7->text(), Qt::CaseInsensitive)) {
+        ui->lineEdit_7->clear();
+        QMessageBox::warning(this, "Entrée invalide", "Veuillez entrer 'libre' ou 'occupée'.");
+    }
+});
+connect(ui->exporter, &QPushButton::clicked, this, &MainWindow::on_exporter_clicked);
+QPushButton* stat = new QPushButton("Afficher Statistiques", this);
+connect(stat, &QPushButton::clicked, this, &MainWindow::on_stat_clicked);
 }
 
 MainWindow::~MainWindow()
@@ -19,11 +80,11 @@ MainWindow::~MainWindow()
 }
 void MainWindow::on_pushButton_ajouter_clicked()
 {
-    int num = ui->lineEdit_1->text().toInt();
-    QString type = ui->lineEdit_2->text();
-    QString etat = ui->lineEdit_4->text();
-    float prix = ui->lineEdit_6->text().toFloat();
-    int etage = ui->lineEdit_3->text().toInt();
+    int num = ui->num->text().toInt();
+    QString type = ui->type->text();
+    QString etat = ui->etage->text();
+    float prix = ui->prix->text().toFloat();
+    int etage = ui->etage->text().toInt();
     Chambre c(num,type,etat,prix,etage);
     bool test = c.ajouter();
 
@@ -61,14 +122,12 @@ void MainWindow::on_pushButton_supprimer_clicked()
 }
 void MainWindow::on_pushButton_modifier_clicked()
 {
-    int num = ui->lineEdit_8->text().toInt(); // Récupère le numéro de chambre
-    QString etat = ui->lineEdit_7->text();    // Récupère le nouvel état
+    int num = ui->lineEdit_8->text().toInt();
+    QString etat = ui->lineEdit_7->text();
 
-    // Créer un objet Chambre temporaire (si nécessaire, mais ici vous pourriez appeler directement la méthode)
-    Chambre c;  // L'objet 'c' n'a pas besoin d'être initialisé avec 'num' et 'etat' ici
+    Chambre c;
 
-    // Appeler la méthode pour modifier l'état de la chambre
-    bool test = c.modifier(num, etat);  // Appelle la méthode qui modifie l'état selon le numéro de la chambre
+    bool test = c.modifier(num, etat);
 
      if (test)
     {
@@ -85,4 +144,71 @@ void MainWindow::on_pushButton_modifier_clicked()
                                           "Click Cancel to exit."),
                               QMessageBox::Cancel);
     }
+}
+void MainWindow::on_pushButton_trier_clicked()
+{
+    Chambre c;
+    QString sortOption = "NUM (DES)"; // Vous pouvez changer cette option selon le type de tri désiré
+
+    QSqlQueryModel *model = c.trier(sortOption); // Appelle la méthode de tri de la classe Chambre
+
+    // Vérifie si le modèle contient des résultats
+    if (model && model->rowCount() > 0)
+    {
+        ui->tableView->setModel(model); // Met à jour la QTableView avec le modèle trié
+        QMessageBox::information(this, QObject::tr("OK"),
+                                 QObject::tr("Tri effectué avec succès.\n"
+                                             "Les résultats sont affichés."),
+                                 QMessageBox::Ok);
+    }
+    else
+    {
+        QMessageBox::critical(this, QObject::tr("Erreur"),
+                              QObject::tr("Le tri n'a pas pu être effectué ou aucun résultat trouvé."),
+                              QMessageBox::Ok);
+    }
+}
+void MainWindow::on_pushButton_rechercher_clicked()
+{
+    QString type = ui->lineEdit_chercher->text(); // Retrieve the type input from QLineEdit
+    Chambre c;
+    QSqlQueryModel *model = c.rechercher(type);  // Assuming you have a method rechercherParType to filter by type
+
+    if (model->rowCount() > 0) {
+        ui->tableView->setModel(model); // Display the results in the Rechercher par type QTableView
+        QMessageBox::information(nullptr, QObject::tr("OK"),
+                                 QObject::tr("Recherche effectuée. Les chambres correspondantes au type sont affichées."),
+                                 QMessageBox::Ok);
+    } else {
+        QMessageBox::critical(nullptr, QObject::tr("Not OK"),
+                              QObject::tr("Aucune chambre trouvée pour ce type."),
+                              QMessageBox::Ok);
+    }
+}
+void MainWindow::on_exporter_clicked() {
+    // Exemple de liste de chambres
+    std::vector<Chambre> chambres = {
+        Chambre(0, "suite", "libre", 1000.0, 0),
+        Chambre(210, "suite", "occupée", 1000.0, 2),
+        Chambre(204, "double", "occupée", 400.0, 2),
+        Chambre(4, "suite", "libre", 1000.0, 0),
+        Chambre(409, "suite", "olibre", 1000.0, 4)
+    };
+
+    // Appeler la fonction d'exportation
+    Chambre::exportPDF(chambres);
+}
+void MainWindow::on_stat_clicked()
+{
+    // Exemple de données
+    std::vector<Chambre> chambres = {
+        Chambre(0, "suite", "libre", 1000.0, 0),
+        Chambre(210, "suite", "occupée", 1000.0, 2),
+        Chambre(204, "double", "occupée", 400.0, 2),
+        Chambre(4, "suite", "libre", 1000.0, 0),
+        Chambre(409, "suite", "olibre", 1000.0, 4)
+    };
+
+    Chambre c; // Création d'un objet Chambre
+    c.statistiques(chambres); // Appel de la fonction statistiques()
 }
