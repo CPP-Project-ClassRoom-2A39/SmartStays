@@ -14,7 +14,17 @@
 #include <QtCharts/QChartView>
 #include <QtCharts/QPieSeries>
 #include <QtCharts/QPieSlice>
-
+#include <QCalendarWidget>
+#include <QListWidget>
+#include <QVBoxLayout>
+#include <QDate>
+#include <QSqlDatabase>
+#include <QLabel>
+#include <QVariant>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QGraphicsItem>
+#include <QColor>
 
 Chambre::Chambre() {}
 
@@ -190,7 +200,7 @@ htmlContent += "</table></body></html>";
 void Chambre::statistiques(const std::vector<Chambre>& chambres) {
     // Variables pour les statistiques
     int totalChambres = chambres.size();
-    int simples = 0, doubles = 0, suites = 0;
+    int simple = 0, doubles = 0, suites = 0;
     int libres = 0, occupees = 0;
     double sommePrix = 0.0;
     std::map<int, int> distributionEtages; // Clé : étage, Valeur : nombre de chambres
@@ -199,7 +209,7 @@ void Chambre::statistiques(const std::vector<Chambre>& chambres) {
     for (const Chambre& chambre : chambres) {
         // Comptage par type
         if (chambre.type == "simple")
-            ++simples;
+            ++simple;
         else if (chambre.type == "double")
             ++doubles;
         else if (chambre.type == "suite")
@@ -249,7 +259,7 @@ void Chambre::statistiques(const std::vector<Chambre>& chambres) {
 */
     // Création du graphique circulaire (camembert)
     QPieSeries* series = new QPieSeries();
-    series->append("Simples", simples);
+    series->append("Simples", simple);
     series->append("Doubles", doubles);
     series->append("Suites", suites);
 
@@ -277,3 +287,31 @@ void Chambre::statistiques(const std::vector<Chambre>& chambres) {
     dialog->resize(600, 400);
     dialog->exec();
 }
+/*QList<QPair<QString, QString>> Chambre::calendrier() {
+    QList<QPair<QString, QString>> chambres;
+
+    // Vérifiez que la base de données est ouverte
+    if (!QSqlDatabase::database().isOpen()) {
+        qDebug() << "Erreur : La base de données n'est pas ouverte.";
+        return chambres;
+    }
+
+    // Exécutez la requête SQL
+    QSqlQuery query;
+    query.prepare("SELECT NUM, ETAT FROM CHAMBRES");
+    if (!query.exec()) {
+        qDebug() << "Erreur lors de l'exécution de la requête:" << query.lastError().text();
+        return chambres;
+    }
+
+    // Parcourez les résultats
+    while (query.next()) {
+        QString num = query.value(0).toString();
+        QString etat = QString::fromUtf8(query.value(1).toByteArray());
+        chambres.append(qMakePair(num, etat));
+        qDebug() << "Numéro de chambre:" << num << ", État:" << etat;
+    }
+
+    return chambres;
+}
+*/

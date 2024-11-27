@@ -3,7 +3,22 @@
 #include <QMessageBox>
 #include <QDebug>
 #include "connection.h"
-
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
+#include "chambre.h"
+#include <QApplication>
+#include <QDesktopServices>
+#include <QTextBrowser>
+#include <QApplication>
+#include <QProcess>
+#include <QUrl>
+#include <QFile>
+#include <QCalendarWidget>
+#include <QTextCharFormat>
+#include <QDate>
+#include <QList>
+#include <QBrush>
+#include <QColor>
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
@@ -21,6 +36,8 @@ int main(int argc, char *argv[])
                               QObject::tr("Connection failed.\n"
                                           "Click Cancel to exit."), QMessageBox::Cancel);
     }
+
+
 
     return a.exec();
 }

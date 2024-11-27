@@ -5,12 +5,15 @@
 #include<QSqlQueryModel>
 #include <QSqlDatabase>
 #include <QSqlError>
+#include <QGraphicsItem>
 
 class Chambre
 {
+
     QString type,etat,netat;
     float prix;
     int num,etage,numchambre;
+
 public:
     Chambre();
     Chambre(int,QString,QString,float,int);
@@ -36,7 +39,8 @@ public:
     QSqlQueryModel* rechercher(QString);
     static void exportPDF(const std::vector<Chambre>& chambres);
     void statistiques(const std::vector<Chambre>& chambres);
-
+QList<QPair<QString, QString>> calendrier();
+void afficherCarte();
 };
 
 #endif // CHAMBRE_H

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Plan des Chambres - SmartStays</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Dimensions réelles de l'image
+        var bounds = [[0, 0], [1600, 2000]]; // Hauteur x Largeur de l'image
+
+        // Initialiser la carte avec un système de coordonnées simple
+        var map = L.map('map', {
+            crs: L.CRS.Simple,
+            maxZoom: 2,
+            minZoom: -2
+        }).setView([800, 1000], -1); // Centré pour un bon aperçu
+
+        // Ajouter l'image comme fond de carte
+        L.imageOverlay('hotel.png', bounds).addTo(map);
+
+        // Liste des chambres (3 étages, 4 portes par étage)
+        var chambres = [
+            // Étage 3
+            { numero: "Chambre 301", coords: [1400, 020] },
+            { numero: "Chambre 302", coords: [1400, 250] },
+            { numero: "Chambre 303", coords: [1400, 1300] },
+            { numero: "Chambre 304", coords: [1400, 1500] },
+
+            // Étage 2
+            { numero: "Chambre 201", coords: [800, 020] },
+            { numero: "Chambre 202", coords: [800, 250] },
+            { numero: "Chambre 203", coords: [800, 1300] },
+            { numero: "Chambre 204", coords: [800, 1500] },
+
+            // Étage 1
+            { numero: "Chambre 101", coords: [260, 020] },
+            { numero: "Chambre 102", coords: [260, 250] },
+            { numero: "Chambre 103", coords: [260, 1300] },
+            { numero: "Chambre 104", coords: [260, 1500] }
+        ];
+
+        // Ajouter un marqueur pour chaque chambre
+        chambres.forEach(function(chambre) {
+            L.marker(chambre.coords).addTo(map)
+                .bindPopup(chambre.numero);
+        });
+    </script>
+</body>
+</html>

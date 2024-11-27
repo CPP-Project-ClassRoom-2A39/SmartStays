@@ -28,15 +28,19 @@ QT +=sql
 QT += core gui widgets printsupport
 QT += core gui
 QT += charts
+QT += serialport
+
 
 CONFIG += console
 SOURCES += \
+    arduino.cpp \
     chambre.cpp \
         main.cpp \
         mainwindow.cpp \
     connection.cpp
 
 HEADERS += \
+    arduino.h \
     chambre.h \
         mainwindow.h \
     connection.h
@@ -48,3 +52,7 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+DISTFILES += \
+    map.html \
+    map.qml
