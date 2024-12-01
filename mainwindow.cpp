@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "seriallink.h"
 #include<reservation.h>
 #include <QMessageBox>
 #include <QDebug>
@@ -14,6 +15,27 @@ MainWindow::MainWindow(QWidget *parent)
 : QMainWindow(parent),
   ui(new Ui::MainWindow){
     ui->setupUi(this);
+    int ret=A.connect_arduino(); // lancer la connexion à arduino
+    switch(ret){
+    case 0:
+            qDebug() << "Arduino is available and connected to :" << A.getarduino_port_name();
+            break;
+        case 1:
+            qDebug() << "Arduino is available is not connected to :" << A.getarduino_port_name();
+            break;
+        case -1:
+            qDebug() << "Arduino is not available.";
+            break;
+        default:
+            qDebug() << "Unknown error.";
+            break;
+    }
+     connect(A.getserial(), &QSerialPort::readyRead, this, &MainWindow::update_label);
+     connect(ui->on, &QPushButton::clicked, this, &MainWindow::on_buttonOn_clicked);
+     connect(ui->off, &QPushButton::clicked, this, &MainWindow::on_buttonOff_clicked);
+     // permet de lancer
+     //le slot update_label suite à la reception du signal readyRead (reception des données).
+
     ui->LA_Num->setRange(0, 999999);
     QRegularExpression rx("^[a-zA-Z\\s]+$");
     QValidator *validator = new QRegularExpressionValidator(rx, this);
@@ -36,8 +58,54 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+    delete arduino;
 
 
+
+}
+void MainWindow::displayArduinoConnection(bool connected) {
+    if (connected) {
+        qDebug() << "Arduino is connected.";
+    } else {
+        qDebug() << "Arduino is disconnected.";
+    }
+}
+void MainWindow::update_label()
+{
+    // Lire les données reçues d'Arduino
+    data = A.read_from_arduino();
+
+    // Mettre à jour les labels en fonction des données reçues
+    if (data == "1") {
+        ui->on->setText("Feu détecté !");
+    } else if (data == "0") {
+        ui->off->setText("Aucun feu détecté.");
+    } else {
+        ui->on->setText("Données : " + QString(data));
+    }
+}
+
+void MainWindow::on_buttonOn_clicked()
+{
+    A.write_to_arduino("1");  // Activer le buzzer
+    qDebug() << "Commande envoyée : 1";
+}
+
+void MainWindow::on_buttonOff_clicked()
+{
+    A.write_to_arduino("0");  // Désactiver le buzzer
+    qDebug() << "Commande envoyée : 0";
+
+}
+Arduino update;
+
+
+void MainWindow::updateGUI(const QByteArray &data)
+{
+    // Votre logique ici pour mettre à jour l'interface graphique avec les données
+    qDebug() << "Received data: " << data;
+    // Par exemple, afficher la donnée dans un label ou un autre élément graphique
+    ui->on->setText(data);
 }
 //ajouter
 void MainWindow::on_btA_clicked()
@@ -240,7 +308,7 @@ void MainWindow::on_BTRCH_7_clicked()
     Reservation.statistiquesParType();
 
 }
-
+//pdf
 void MainWindow::on_BTRCH_8_clicked()
 {
     QString nomFichierPDF = QFileDialog::getSaveFileName(this, "Enregistrer PDF", "", "Fichiers PDF (*.pdf)");
@@ -255,81 +323,63 @@ void MainWindow::on_BTRCH_8_clicked()
                    }
                }
 }
-
-void MainWindow::on_mail_clicked()
-{
+//mail d'une reservation
+void MainWindow::on_mail_clicked() {
+     // Définir les paramètres du serveur
     QString serveur = "smtp.gmail.com";
-    int port = 587; // Port pour SMTP avec STARTTLS
+    int port = 587;
 
-    // Informations de l'expéditeur et du destinataire
     QString expediteur = "kmarsrarfi5@gmail.com";
     QString destinataire = ui->reciepient->text();
     QString subject = "Cher notre fidele client";
 
-    // Détails du message
     QString corps = ui->contenu->toPlainText();
-
-    // Vérification des champs
     if (destinataire.isEmpty() || corps.isEmpty()) {
         QMessageBox::warning(this, "Erreur", "Veuillez saisir votre mail et l'object .");
-        return; // Arrêter l'exécution si les champs sont vides
+        return;
     }
-
-    // Connexion au serveur SMTP
+    // connexion
     QSslSocket socket;
     socket.connectToHost(serveur, port);
     if (!socket.waitForConnected()) {
         qDebug() << "Échec de connexion au serveur SMTP:" << socket.errorString();
         return;
     }
-
-    // Attente de la réponse du serveur
     if (!socket.waitForReadyRead()) {
         qDebug() << "Délai d'attente de réponse du serveur SMTP:" << socket.errorString();
         return;
     }
-    qDebug() << socket.readAll(); // Afficher la réponse initiale du serveur
-
-    // Envoi de la commande EHLO
+    qDebug() << socket.readAll();
     socket.write("EHLO localhost\r\n");
     if (!socket.waitForBytesWritten() || !socket.waitForReadyRead()) {
         qDebug() << "Délai d'attente de réponse du serveur SMTP (EHLO):" << socket.errorString();
         return;
     }
-    qDebug() << socket.readAll(); // Afficher la réponse après EHLO
-
-    // Envoi de la commande STARTTLS
+    qDebug() << socket.readAll();
     socket.write("STARTTLS\r\n");
     if (!socket.waitForBytesWritten() || !socket.waitForReadyRead()) {
         qDebug() << "Délai d'attente de réponse du serveur SMTP (STARTTLS):" << socket.errorString();
         return;
     }
-    qDebug() << socket.readAll(); // Afficher la réponse après STARTTLS
-
-    // Démarrer le chiffrement
+    qDebug() << socket.readAll();
     socket.startClientEncryption();
     if (!socket.waitForEncrypted()) {
         qDebug() << "Échec du chiffrement:" << socket.errorString();
         return;
     }
 
-    // Envoi de la commande AUTH LOGIN
     socket.write("AUTH LOGIN\r\n");
     if (!socket.waitForBytesWritten() || !socket.waitForReadyRead()) {
         qDebug() << "Délai d'attente de réponse du serveur SMTP (AUTH LOGIN):" << socket.errorString();
         return;
     }
-    qDebug() << socket.readAll(); // Afficher la réponse après AUTH LOGIN
-
-    // Envoi du nom d'utilisateur encodé en Base64
+    qDebug() << socket.readAll();
     socket.write(QByteArray().append(expediteur.toUtf8()).toBase64() + "\r\n");
     if (!socket.waitForBytesWritten() || !socket.waitForReadyRead()) {
         qDebug() << "Délai d'attente de réponse du serveur SMTP (Nom d'utilisateur):" << socket.errorString();
         return;
     }
-    qDebug() << socket.readAll(); // Afficher la réponse après l'envoi du nom d'utilisateur
-
-    // Envoi du mot de passe encodé en Base64
+    qDebug() << socket.readAll();
     socket.write(QByteArray().append("lzeg felv vatx ztca").toBase64() + "\r\n");
     if (!socket.waitForBytesWritten() || !socket.waitForReadyRead()) {
         qDebug() << "Échec de l'authentification SMTP (Mot de passe):" << socket.errorString();
@@ -337,31 +387,24 @@ void MainWindow::on_mail_clicked()
     }
     qDebug() << socket.readAll(); // Afficher la réponse après l'envoi du mot de passe
 
-    // Envoi de la commande MAIL FROM
     socket.write("MAIL FROM:<" + expediteur.toUtf8() + ">\r\n");
     if (!socket.waitForBytesWritten() || !socket.waitForReadyRead()) {
         qDebug() << "Délai d'attente de réponse du serveur SMTP (MAIL FROM):" << socket.errorString();
         return;
     }
-    qDebug() << socket.readAll(); // Afficher la réponse après MAIL FROM
-
-    // Envoi de la commande RCPT TO
+    qDebug() << socket.readAll(); // Afficher la réponse après MAIL
     socket.write("RCPT TO:<" + destinataire.toUtf8() + ">\r\n");
     if (!socket.waitForBytesWritten() || !socket.waitForReadyRead()) {
         qDebug() << "Délai d'attente de réponse du serveur SMTP (RCPT TO):" << socket.errorString();
         return;
     }
-    qDebug() << socket.readAll(); // Afficher la réponse après RCPT TO
-
-    // Envoi de la commande DATA
+    qDebug() << socket.readAll();
     socket.write("DATA\r\n");
     if (!socket.waitForBytesWritten() || !socket.waitForReadyRead()) {
         qDebug() << "Délai d'attente de réponse du serveur SMTP (DATA):" << socket.errorString();
         return;
     }
-    qDebug() << socket.readAll(); // Afficher la réponse après DATA
-
-    // Envoi des en-têtes et du corps du message
+    qDebug() << socket.readAll();
     socket.write("From: " + expediteur.toUtf8() + "\r\n");
     socket.write("To: " + destinataire.toUtf8() + "\r\n");
     socket.write("Subject: " + subject.toUtf8() + "\r\n");
@@ -372,57 +415,41 @@ void MainWindow::on_mail_clicked()
         qDebug() << "Échec d'envoi des données du mail:" << socket.errorString();
         return;
     }
-    qDebug() << socket.readAll(); // Afficher la réponse après l'envoi des données du mail
-
-    // Envoi de la commande QUIT
+    qDebug() << socket.readAll();
     socket.write("QUIT\r\n");
     if (!socket.waitForBytesWritten()) {
         qDebug() << "Échec d'envoi de la commande QUIT:" << socket.errorString();
         return;
     }
-
-    // Fermeture de la connexion
     socket.close();
     QMessageBox::information(this, "Succès", "L'email a été envoyé avec succès à " + destinataire);
 }
 
-
-
-
-
+//historique d'une reservation
 void MainWindow::on_Histo_clicked()
 {
     QString cheminFichier = "C:/Users/PC/Desktop/Atelier_Connexion1/histo.txt";
      QFile file(cheminFichier);
+     //Afficher le contenu de l'historique
      if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
      {
          QMessageBox::warning(this, "Erreur", "Impossible d'ouvrir le fichier d'historique des réservations.");
          return;
      }
-
      // Lire le contenu du fichier
      QTextStream in(&file);
      QString historique = in.readAll();
-
-     // Fermer le fichier
      file.close();
-
-     // Afficher le contenu de l'historique dans une boîte de dialogue
      QMessageBox msgBox;
      msgBox.setWindowTitle("Historique des Réservations");
      msgBox.setText(historique);
      msgBox.exec();
-
-
-
-
-
-
 }
+
 void MainWindow::afficherHistor()
 {
     QString cheminFichier = "C:/Users/PC/Desktop/Atelier_Connexion1/histo.txt";
-
+//Vérifier la possibilité d'ajouter
        QFile file(cheminFichier);
        if (!file.open(QIODevice::Append | QIODevice::Text))
        {
@@ -430,8 +457,10 @@ void MainWindow::afficherHistor()
            return;
 }
 }
+
 void MainWindow::writeToHist(const QString &fileN) {
     QFile file(fileN);
+    //Écrire  dans un fichier.
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         qDebug() << "Erreur lors de l'ouverture du fichier historique:" << fileN;
         return;
@@ -445,6 +474,7 @@ void MainWindow::writeToHist(const QString &fileN) {
     file.close();
     qDebug() << "Historique enregistré dans le fichier:" << fileN;
 }
+
 void MainWindow::addToHist(const QString &action, int id) {
     QString cheminFichier = "C:/Users/PC/Desktop/Atelier_Connexion1/histo.txt";
     QFile file(cheminFichier);
@@ -463,3 +493,7 @@ void MainWindow::addToHist(const QString &action, int id) {
     file.close();
     qDebug() << "Entrée ajoutée avec succès à l'historique.";
 }
+
+
+//arduino
+

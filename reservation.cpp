@@ -20,6 +20,7 @@ Reservation::Reservation(int num, QDate dateDebut, QDate dateFin, QString type) 
     this->dateFin = dateFin;
     this->type = type;
 }
+//ajouter une reservation
 bool Reservation::ajouter() {
     QSqlQuery query;
     query.prepare("INSERT INTO RESERVATION (NUM, DATE_DEBUT, DATE_FIN, TYPE) " "VALUES (:NUM, :DATE_DEBUT, :DATE_FIN, :TYPE)");
@@ -30,7 +31,7 @@ bool Reservation::ajouter() {
     return query.exec();
 
 }
-
+//modifier une reservation
 bool Reservation::modifier(int idr) {
     QSqlQuery query;
     query.prepare("UPDATE RESERVATION SET NUM = :NUM, DATE_DEBUT = :DATE_DEBUT, DATE_FIN = :DATE_FIN, TYPE = :TYPE " "WHERE ID = :ID");
@@ -42,7 +43,7 @@ bool Reservation::modifier(int idr) {
     return query.exec();
 
 }
-
+//supprimer une reservation
 bool Reservation::supprimer(int id) {
     QSqlQuery query;
     query.prepare("DELETE FROM RESERVATION WHERE ID = :ID");
@@ -50,11 +51,10 @@ bool Reservation::supprimer(int id) {
     return query.exec();
 
 }
-
+//afficher une reservation
 QSqlQueryModel* Reservation::afficher() {
     QSqlQueryModel* model = new QSqlQueryModel();
     model->setQuery("SELECT * FROM RESERVATION");
-
     model->setHeaderData(0, Qt::Horizontal, QObject::tr("ID"));
     model->setHeaderData(1, Qt::Horizontal, QObject::tr("Date Début"));
     model->setHeaderData(2, Qt::Horizontal, QObject::tr("Date Fin"));
@@ -62,7 +62,7 @@ QSqlQueryModel* Reservation::afficher() {
     model->setHeaderData(4, Qt::Horizontal, QObject::tr("NUM"));
     return model;
 }
-
+//trier une reservation
 QSqlQueryModel* Reservation::trier(QString condition, bool ascendant) {
     QSqlQueryModel* model = new QSqlQueryModel();
        QString order = ascendant ? "ASC" : "DESC";
@@ -71,10 +71,9 @@ QSqlQueryModel* Reservation::trier(QString condition, bool ascendant) {
            model->setQuery("SELECT * FROM RESERVATION ORDER BY DATE_DEBUT " + order);
        } else if (condition == "dateFin") {
            model->setQuery("SELECT * FROM RESERVATION ORDER BY DATE_FIN " + order);
-       } else if (condition == "nom") {
+       } else if (condition == "num") {
            model->setQuery("SELECT * FROM RESERVATION ORDER BY NOM " + order);
        }
-
        model->setHeaderData(0, Qt::Horizontal, QObject::tr("ID"));
        model->setHeaderData(1, Qt::Horizontal, QObject::tr("Num"));
        model->setHeaderData(2, Qt::Horizontal, QObject::tr("Date Début"));
@@ -83,7 +82,7 @@ QSqlQueryModel* Reservation::trier(QString condition, bool ascendant) {
 
        return model;
    }
-
+//rechercher une reservation
 void Reservation::recherche(int id) {
     QSqlQuery query;
     query.prepare("SELECT * FROM RESERVATION WHERE ID = :ID");
@@ -97,7 +96,7 @@ void Reservation::recherche(int id) {
         this->type = query.value("TYPE").toString();
     }
 }
-
+//statistique d'une reservation
 QMap<QString, int> Reservation::statistiquesParType() {
     QMap<QString, int> stats;
     QSqlQuery query("SELECT TYPE, COUNT(*) FROM RESERVATION GROUP BY TYPE");
@@ -108,33 +107,24 @@ QMap<QString, int> Reservation::statistiquesParType() {
         stats[type] = count;
     }
 
-    // Création du graphique circulaire
     QPieSeries* series = new QPieSeries();
     for (auto it = stats.begin(); it != stats.end(); ++it) {
         series->append(it.key(), it.value());
     }
-
     for (QPieSlice* slice : series->slices()) {
         slice->setLabel(QString("%1 : %2").arg(slice->label()).arg(slice->value()));
     }
-
-    // Création et affichage du graphique
     QChart* chart = new QChart();
     chart->addSeries(series);
     chart->setTitle("Répartition des réservations par type");
     chart->setAnimationOptions(QChart::SeriesAnimations);
-
     QChartView* chartView = new QChartView(chart);
     chartView->setRenderHint(QPainter::Antialiasing);
-
     QDialog* dialog = new QDialog();
     dialog->setWindowTitle("Statistiques des Réservations");
-
-    // Create a layout and set it to the dialog
     QVBoxLayout* layout = new QVBoxLayout(dialog);
     layout->addWidget(chartView);
     dialog->setLayout(layout);
-
     dialog->resize(600, 400);
     dialog->exec();
 
