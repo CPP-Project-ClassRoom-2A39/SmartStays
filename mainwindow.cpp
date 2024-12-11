@@ -11,10 +11,20 @@
 #include <QRegularExpressionValidator>
 #include <QIntValidator>
 #include <QSslSocket>
+#include "databasehelper.h"
+#include <QSqlTableModel>  // Ajoutez cette ligne
+#include <QSqlDatabase>     // Ajoutez cette ligne si ce n'est pas déjà fait
+#include <QSqlQuery>
+#include <QSqlError>
+#include "arduino.h"
+
+
 MainWindow::MainWindow(QWidget *parent)
 : QMainWindow(parent),
   ui(new Ui::MainWindow){
     ui->setupUi(this);
+    checkArduinoPort();
+    qDebug() << "Available drivers:" << QSqlDatabase::drivers();
     int ret=A.connect_arduino(); // lancer la connexion à arduino
     switch(ret){
     case 0:
@@ -50,10 +60,34 @@ MainWindow::MainWindow(QWidget *parent)
       ui->CM_type->addItem("pension complette");
       ui->CM_type->addItem("demi-pension");
 
-
-
-
+      QSqlDatabase db = DatabaseHelper::connectToDatabase();
+          if (db.isOpen()) {
+              qDebug() << "Base de données connectée avec succès.";
+              loadReservations(); // Charger les données
+          } else {
+              qDebug() << "Base de données connectée mais il ne connait pas .";
+              QMessageBox::critical(this, "Erreur de base de données", " connexion à la base de données avec succes mais il connait pas cette base .");
+          }
+      }
+void MainWindow::checkArduinoPort() {
+    qDebug() << "Checking Arduino port...";
+    // Ajoutez ici la logique de vérification du port si nécessaire
 }
+
+void MainWindow::loadReservations() {
+    QSqlTableModel *model = new QSqlTableModel(this);
+    model->setTable("reservations"); // Nom de votre table
+    if (!model->select()) {
+        qDebug() << "Erreur lors de la sélection des données :" << model->lastError().text();
+        QMessageBox::critical(this, "Erreur", "Impossible de charger les réservations. Vérifiez la table.");
+        return;
+    }
+
+    ui->tab_reservation->setModel(model);
+    qDebug() << "Réservations chargées avec succès.";
+}
+
+
 
 MainWindow::~MainWindow()
 {
@@ -73,28 +107,20 @@ void MainWindow::displayArduinoConnection(bool connected) {
 void MainWindow::update_label()
 {
     // Lire les données reçues d'Arduino
-    data = A.read_from_arduino();
-
-    // Mettre à jour les labels en fonction des données reçues
-    if (data == "1") {
-        ui->on->setText("Feu détecté !");
-    } else if (data == "0") {
-        ui->off->setText("Aucun feu détecté.");
-    } else {
-        ui->on->setText("Données : " + QString(data));
-    }
+        QByteArray data = A.read_from_arduino();
+        ui->on->setText("Clients: " + QString(data));
 }
 
 void MainWindow::on_buttonOn_clicked()
 {
-    A.write_to_arduino("1");  // Activer le buzzer
-    qDebug() << "Commande envoyée : 1";
+    A.write_to_arduino("1");
+    qDebug() << "Commande envoyée : on";
 }
 
 void MainWindow::on_buttonOff_clicked()
 {
-    A.write_to_arduino("0");  // Désactiver le buzzer
-    qDebug() << "Commande envoyée : 0";
+    A.write_to_arduino("0");
+    qDebug() << "Commande envoyée : off";
 
 }
 Arduino update;
@@ -102,9 +128,8 @@ Arduino update;
 
 void MainWindow::updateGUI(const QByteArray &data)
 {
-    // Votre logique ici pour mettre à jour l'interface graphique avec les données
+    //  mettre à jour l'interface graphique avec les données
     qDebug() << "Received data: " << data;
-    // Par exemple, afficher la donnée dans un label ou un autre élément graphique
     ui->on->setText(data);
 }
 //ajouter

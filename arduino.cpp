@@ -22,7 +22,6 @@ int Arduino::connect_arduino()
 {
     arduino_is_available = false;  // Initialisation de la disponibilité
     arduino_port_name = "";
-    // Recherche du port Arduino via son vendor et product ID
     //est connecte
     foreach (const QSerialPortInfo& serial_port_info, QSerialPortInfo::availablePorts()) {
         if (serial_port_info.hasVendorIdentifier() && serial_port_info.hasProductIdentifier()) {

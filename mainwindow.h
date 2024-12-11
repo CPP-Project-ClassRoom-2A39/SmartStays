@@ -11,6 +11,8 @@
 #include <QMessageBox>
 #include "seriallink.h"  // Inclure seriallink pour la communication série
 #include "arduino.h"     // Inclure Arduino pour la gestion des données Arduino
+#include <QSqlTableModel> // Si nécessaire pour une meilleure organisation
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -47,12 +49,15 @@ private slots:
     void on_buttonOff_clicked();
     void update_label();
     void updateGUI(const QByteArray &data);
+    void loadReservations(); // Méthode pour charger les réservations
+
 
 private:
     // Méthodes pour l'historique
     //void addToHist();
     void writeToHist(const QString &fileN);
     void afficherHistor();
+    void checkArduinoPort();
 
     // Attributs de l'interface
     Ui::MainWindow *ui;

@@ -33,6 +33,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     arduino.cpp \
     connection.cpp \
+    databasehelper.cpp \
     generateurpdf.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -43,6 +44,7 @@ SOURCES += \
 HEADERS += \
     arduino.h \
     connection.h \
+    databasehelper.h \
     generateurpdf.h \
     mainwindow.h \
     reservation.h
