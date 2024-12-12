@@ -1,27 +1,30 @@
 #include "connection.h"
-#include <QDebug>
-#include <QSqlDatabase>
-#include <QSqlError>
-#include <QSqlQuery>
-Connection::Connection() {}
 
+Connection::Connection()
+{
+
+}
+/*
 bool Connection::createconnect() {
-    bool test = false;
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("Source_Projet2A39"); // insérer le nom de la source de données
-    db.setUserName("system");                // insérer le nom de l'utilisateur
-    db.setPassword("esprit24");              // insérer le mot de passe de cet utilisateur
-
-    if (db.open()) {
-        test = true;
+    if (QSqlDatabase::contains("qt_sql_default_connection")) {
+        db = QSqlDatabase::database("qt_sql_default_connection");
     } else {
-        qDebug() << "Database connection error:" << db.lastError().text();
+        db.setDatabaseName("projetcpp"); // Nom de la source de données
+        db.setUserName("PROJET");        // Nom de l'utilisateur
+        db.setPassword("esprit24");
     }
+    return db.open();
+}*/
+void Connection::closeConnection(){db.close();}
 
-    return test;
+bool Connection::createconnect()
+{bool test=false;
+QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
+db.setDatabaseName("projet"); // Nom de la source de données
+db.setUserName("projetCPP2A39");        // Nom de l'utilisateur
+db.setPassword("esprit");
+
+if (db.open())
+test=true;
+    return  test;
 }
-
-void Connection::closeConnection() {
-    db.close();
-}
-
