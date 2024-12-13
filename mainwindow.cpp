@@ -35,15 +35,6 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     ui->tableView->setModel(c.afficher());  
-      // Configurer la connexion à Arduino
-      if (myArduino.connect_arduino() == 0) {
-          qDebug() << "Connexion réussie à Arduino sur le port" << myArduino.getarduino_port_name();
-
-          // Connecter le signal de données série d'Arduino au slot handleArduinoData
-          connect(myArduino.getserial(), &QSerialPort::readyRead, this, &MainWindow::handleArduinoData);
-      } else {
-          QMessageBox::critical(this, "Erreur", "Impossible de connecter à Arduino.");
-      }
     //controle de saisie
 ui->prix->setValidator(new QIntValidator(0, 99999, this));
 ui->num->setValidator(new QIntValidator(0, 99999, this));
@@ -126,16 +117,33 @@ connect(ui->lineEdit_7, &QLineEdit::editingFinished, [=]() {
         connect(calendarButton, &QPushButton::clicked, this, &MainWindow::showCalendar);*/
     // Configurer les jours occupés
     setupOccupiedDays();
-   // ui->setupUi(this);
+    // Connexion à Arduino
+        int ret=A.connect_arduino(); // lancer la connexion à arduino
+        switch(ret){
+        case(0):qDebug()<< "arduino is available and connected to : "<< A.getarduino_port_name();
+            break;
+        case(1):qDebug() << "arduino is available but not connected to :" <<A.getarduino_port_name();
+           break;
+        case(-1):qDebug() << "arduino is not available";
+        }
+        buzzerTimer = new QTimer(this);  // Créer le timer
+            connect(buzzerTimer, &QTimer::timeout, this, &MainWindow::increaseBuzzerVolume);
 
-    // Connecter le bouton au slot
-    connect(ui->buttonAfficherCarte, &QPushButton::clicked, this, &MainWindow::openMap);
+            // Connecter les événements des boutons
+            connect(ui->pushButton, &QPushButton::pressed, this, &MainWindow::onPushButtonPressed);
+               connect(ui->pushButton, &QPushButton::released, this, &MainWindow::onPushButtonReleased);
+               connect(ui->pushButton_2, &QPushButton::clicked, this, &MainWindow::on_pushButton_2_clicked);
+
+               // Autres connexions
+               connect(buzzerTimer, &QTimer::timeout, this, &MainWindow::onBuzzerTimeout);
+
 
     }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+    delete buzzerTimer;
 }
 void MainWindow::on_pushButton_ajouter_clicked()
 {
@@ -265,7 +273,9 @@ void MainWindow::on_stat_clicked()
         Chambre(210, "suite", "occupée", 1000.0, 2),
         Chambre(204, "double", "occupée", 400.0, 2),
         Chambre(4, "suite", "libre", 1000.0, 0),
-        Chambre(409, "suite", "olibre", 1000.0, 4)
+        Chambre(409, "suite", "libre", 1000.0, 4),
+        Chambre(300, "simple", "libre", 300.0, 3)
+
     };
 
     Chambre c; // Création d'un objet Chambre
@@ -347,25 +357,69 @@ void MainWindow::openMap()
     //convertir le chemin d'accès en objet QUrl pour le passer à la méthode openUrl
     QDesktopServices::openUrl(QUrl(filePath));
 }
-Arduino myArduino;
-
-void MainWindow::setupArduino() {
-    if (myArduino.connect_arduino() == 0) {
-        qDebug() << "Connexion à Arduino réussie sur le port" << myArduino.getarduino_port_name();
-    } else {
-        QMessageBox::critical(this, "Erreur", "Impossible de connecter à Arduino.");
-    }
-}
-void MainWindow::handleFireAlert() {
-    QMessageBox::warning(this, "Alerte Incendie", "Un incendie a été détecté par le capteur !");
-}
-void MainWindow::handleArduinoData() {
+void MainWindow::update_label()
+{
     // Lire les données reçues d'Arduino
-    QByteArray data = myArduino.getserial()->readAll();
-    qDebug() << "Données reçues d'Arduino : " << data;
+    data = A.read_from_arduino();
 
-    // Exemple : vérifier si l'Arduino signale un incendie
-    if (data.contains("fire")) {
-        handleFireAlert(); // Appelle la fonction pour gérer l'alerte
+    // Mettre à jour les labels en fonction des données reçues
+    if (data == "1") {
+        ui->label_3->setText("Feu détecté !");
+    } else if (data == "0") {
+        ui->label_3->setText("Aucun feu détecté.");
+    } else {
+        ui->label_3->setText("Données : " + QString(data));
     }
+}
+
+
+void MainWindow::onPushButtonPressed() {
+    qDebug() << "Le bouton ON est pressé, volume du buzzer va augmenter.";
+    buzzerTimer->start(2000); // Démarre l'augmentation du volume
+}
+
+void MainWindow::onPushButtonReleased() {
+    qDebug() << "Le bouton ON est relâché, arrêt de l'augmentation du volume.";
+    buzzerTimer->stop(); // Arrête l'augmentation du volume
+}
+
+void MainWindow::increaseBuzzerVolume() {
+    // Affiche un message lorsque la fonction est appelée
+    qDebug() << "increaseBuzzerVolume appelé.";
+
+    // Augmenter le volume du buzzer (par exemple, augmenter de 1 à chaque appel)
+    buzzerVolume++;
+
+    // Vérifie si le volume n'excède pas une valeur maximale (par exemple, 100)
+    if (buzzerVolume > 100) {
+        buzzerVolume = 100;  // Limite maximale
+    }
+
+    // Afficher le volume actuel du buzzer dans la sortie du débogueur
+    qDebug() << "Le volume du buzzer augmente à" << buzzerVolume;
+
+    // Tu peux aussi envoyer cette valeur à Arduino si nécessaire
+    QByteArray command = QByteArray::number(buzzerVolume);  // Exemple de conversion en QByteArray
+    A.write_to_arduino(command);
+}
+
+
+void MainWindow::on_pushButton_clicked()  // Bouton ON
+{
+    A.write_to_arduino("1");  // Activer le buzzer
+    qDebug() << "Buzzer activé.";
+}
+
+void MainWindow::on_pushButton_2_clicked()  // Bouton OFF
+{
+    A.write_to_arduino("0");  // Désactiver le buzzer
+    buzzerTimer->stop();      // Arrêter le timer
+    buzzerVolume = 10;        // Réinitialiser le volume
+    qDebug() << "Buzzer désactivé et timer arrêté.";
+}
+
+void MainWindow::onBuzzerTimeout() {
+    // Logique de la méthode lorsque le timer expire
+    qDebug() << "Timer expiré, augmenter le volume du buzzer.";
+    // Implémenter le comportement souhaité, par exemple augmenter le volume
 }

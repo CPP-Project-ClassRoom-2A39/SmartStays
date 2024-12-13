@@ -14,6 +14,7 @@
 #include <QList>
 #include <QBrush>
 #include <QColor>
+#include <QTimer>
 #include"arduino.h"
 namespace Ui {
 class MainWindow;
@@ -36,16 +37,27 @@ public:
 
 
 private slots:
- void openMap();
- void handleArduinoData(); // Slot pour traiter les données reçues d'Arduino
- void handleFireAlert();
-  void setupArduino();
+    void openMap();
+    void update_label();   // slot permettant la mise à jour du label état de la lampe 1,
+    // ce slot est lancé à chaque réception d'un message de Arduino
+    void on_pushButton_clicked();
+    void on_pushButton_2_clicked();
+    void onBuzzerTimeout(); // Méthode appelée lorsque le timer expire
+    void onPushButtonPressed();
+    void onPushButtonReleased();
+    void increaseBuzzerVolume();
 private:
     void setupOccupiedDays();
     Ui::MainWindow *ui;
     Chambre c;
     Chambre *chambre;
-    Arduino myArduino;
+    QByteArray data;  // Données reçues d'Arduino
+    Arduino A;        // Objet Arduino pour gérer la communication
+    QTimer *buzzerTimer; // Timer pour surveiller l'état
+        int buzzerVolume = 10; // Volume initial du buzzerr
+        bool offButtonPressed = false;  // Indicateur pour savoir si le bouton OFF est pressé
+         QPushButton* offButton; // Référence au bouton OFF
+
 
 };
 
